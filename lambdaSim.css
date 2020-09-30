@@ -1,0 +1,85 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 1.0em;
+    padding: 0px 20px;
+    color: #444;
+}
+
+.container {
+    width: 95%;
+    height: 95%;
+}
+
+.params {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.9em;
+    color: #555;
+    width: 95%;
+    margin-top: -5px;
+}
+
+.params>div {
+    padding: 0px 35px 15px 0px;
+}
+
+.params>div>div {
+    padding: 0px 0px 5px 0px;
+}
+
+.params label {
+    font-size: 0.95em;
+    color: #444;
+    font-weight: 700;
+}
+
+.params input,
+.params select {
+    margin-top: 3px;
+    font-size: 1.0em;
+    padding: 4px 7px;
+    border: solid 1px #aaa;
+    border-radius: 3px;
+}
+
+.summary {
+    font-size: 0.9em;
+    border-spacing: 0px;
+    padding-bottom: 20px;
+}
+
+.summary td {
+    padding-top: 3px;
+    border-bottom: 1px solid #ddd;
+}
+
+.summary tr td:nth-child(2) {
+    text-align: right;
+}
+
+.summary tr td:nth-child(3) {
+    padding-left: 10px;
+}
+
+h3 {
+    font-weight: 500;
+    color: rgb(215, 107, 0);
+}
+
+#status {
+    color: rgb(211, 170, 129);
+    margin: -5px 0px 10px 0px;
+    font-size: small;
+}
+
+.info {
+    font-size: 1.0em;
+    font-weight: bolder;
+    padding-left: 3px;
+    color: #666;
+}
+
+#notes {
+    font-size:0.8em; 
+    font-style: italic;
+}

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>AWS Lambda Scaling Simulator</title>
+    <link rel="stylesheet" href="lambdaSim.css">
+</head>
+
+<body>
+
+    <h1><span style="color: rgb(215, 107, 0)">&#955;</span> Lambda Scaling Simulator</h1>
+    <h3>Parameters</h3>
+    <div class="params">
+        <div>
+            <div>
+                <label for="TARGET_RPS">Invocation Rate</label>
+                <span id="tooltip-TARGET_RPS" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="TARGET_RPS" min="1" max="200000" value="150" onchange="runLambdaSim();"> RPS
+            </div>
+        </div>
+        <div>
+            <div>
+                <label for="RAMPUP_PERIOD_SEC">Ramp-up Period</label>
+                <span id="tooltip-RAMPUP_PERIOD_SEC" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="RAMPUP_PERIOD_SEC" min="1" max="10000" value="10"
+                    onchange="rampUpPeriodUpdated(this); runLambdaSim();"> sec</div>
+        </div>
+        <div>
+            <div>
+                <label for="COLD_START_DURATION_MS">Cold Start Duration</label>
+                <span id="tooltip-COLD_START_DURATION_MS" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="COLD_START_DURATION_MS" min="1" max="600000" value="3000"
+                    onchange="runLambdaSim();"> ms</div>
+        </div>
+        <div>
+            <div>
+                <label for="WARM_START_DURATION_MS">Warm Start Duration</label>
+                <span id="tooltip-WARM_START_DURATION_MS" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="WARM_START_DURATION_MS" min="1" max="600000" value="400"
+                    onchange="runLambdaSim();"> ms</div>
+        </div>
+        <div>
+            <div>
+                <label for="CONCURRENCY_LIMIT">Concurrency Limit</label>
+                <span id="tooltip-CONCURRENCY_LIMIT" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="CONCURRENCY_LIMIT" min="1" max="500000" value="1000"
+                    onchange="runLambdaSim();"></div>
+        </div>
+        <div>
+            <div>
+                <label for="INITIAL_WARM_CONTAINERS">Initial Warm/Provisioned Capacity</label>
+                <span id="tooltip-INITIAL_WARM_CONTAINERS" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="INITIAL_WARM_CONTAINERS" min="0" max="500000" value="0"
+                    onchange="runLambdaSim();"></div>
+        </div>
+        <div>
+            <div>
+                <label for="AWS_REGION">AWS Region</label>
+                <span id="tooltip-AWS_REGION" class="info">&#9432;</span>
+            </div>
+            <div><select name="AWS_REGION" id="AWS_REGION" onchange="awsRegionUpdated(this); runLambdaSim();">
+                    <option value="3000">US East (N. Virginia)</option>
+                    <option value="3000">US West (Oregon)</option>
+                    <option value="3000">Europe (Ireland)</option>
+                    <option value="1000">US East (Ohio)</option>
+                    <option value="1000">Asia Pacific (Tokyo)</option>
+                    <option value="1000">Europe (Frankfurt)</option>
+                    <option value="500">Other Regions</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <div>
+                <label for="BURST_CONCURRENCY_QUOTA">Burst Concurrency Quota</label>
+                <span id="tooltip-BURST_CONCURRENCY_QUOTA" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="BURST_CONCURRENCY_QUOTA" min="1" max="5000" value="3000" disabled /></div>
+        </div>
+        <div>
+            <div>
+                <label for="SIM_DURATION_SEC">Simulation Period</label>
+                <span id="tooltip-SIM_DURATION_SEC" class="info">&#9432;</span>
+            </div>
+            <div><input type="number" id="SIM_DURATION_SEC" min="1" max="2000" value="20" onchange="runLambdaSim();">
+                sec</div>
+        </div>
+    </div>
+    <p id="status">...</p>
+    <h3>Results</h3>
+    <div class="container">
+        <canvas id="lambdaChart"></canvas>
+    </div>
+    <h3>Summary</h3>
+    <table class="summary">
+        <tr>
+            <td>Simulation Period</td>
+            <td id="summarySimDuration"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Invocations Requested</td>
+            <td id="summaryInvocationsRequested"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>&nbsp;&#8627;Throttled</td>
+            <td id="summaryInvocationsThrottled"></td>
+            <td id="summaryInvocationsThrottledPct"></td>
+        </tr>
+        <tr>
+            <td>&nbsp;&#8627;Started</td>
+            <td id="summaryInvocationsStarted"></td>
+            <td id="summaryInvocationsStartedPct"></td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#8627;Started (Cold)</td>
+            <td id="summaryInvocationsStartedCold"></td>
+            <td id="summaryInvocationsStartedColdPct"></td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#8627;Started (Warm)</td>
+            <td id="summaryInvocationsStartedWarm"></td>
+            <td id="summaryInvocationsStartedWarmPct"></td>
+        </tr>
+        <tr>
+            <td>Max Concurrency</td>
+            <td id="summaryConcurrencyMax"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Average Duration</td>
+            <td id="summaryAvgDuration"></td>
+            <td></td>
+        </tr>
+    </table>
+    <p id="notes">Reference: <a href="https://docs.aws.amazon.com/lambda/latest/dg/invocation-scaling.html">AWS Lambda Scaling docs</a></p>
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js"></script>
+<script src="lambdaSim.js"></script>
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<script>
+    tippy('#tooltip-TARGET_RPS', { content: 'Number of function invocations to execute [units: requests per second].' });
+    tippy('#tooltip-RAMPUP_PERIOD_SEC', { content: 'Time to ramp-up linearly from 0 RPS to target RPS [units: seconds]' });
+    tippy('#tooltip-COLD_START_DURATION_MS', { content: 'Function duration for a cold-start invocation (new function instance) [units: milliseconds].' });
+    tippy('#tooltip-WARM_START_DURATION_MS', { content: 'Function duration for a warm-start invocation (reused function instance) [units: milliseconds].' });
+    tippy('#tooltip-CONCURRENCY_LIMIT', { content: 'Maximum concurrency (parallel executions) of the function. Defined using either function-level \'reserved concurrency\' or account-level \'unreserved concurrency\'. Default limit is 1000.' });
+    tippy('#tooltip-INITIAL_WARM_CONTAINERS', { content: 'Provisioned Concurrency or number of pre-warmed function instances at start of simulation.' });
+    tippy('#tooltip-AWS_REGION', { content: 'AWS Region in which function will execute. Determines Burst Concurrency Quota (fixed per region).' });
+    tippy('#tooltip-BURST_CONCURRENCY_QUOTA', { content: 'Level of concurrency that can be reached with an initial burst of traffic (fixed per region). After the initial burst, concurrency can scale by an additional 500 instances each minute, until the function concurrency limit is reached.' });
+    tippy('#tooltip-SIM_DURATION_SEC', { content: 'Time period to simulate [units: seconds].' });
+</script>
+
+</html>
