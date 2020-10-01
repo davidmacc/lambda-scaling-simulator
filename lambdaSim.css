@@ -81,5 +81,7 @@ h3 {
 
 #notes {
     font-size:0.8em; 
+    padding-bottom: 0px;
+    line-height: 20px;
     font-style: italic;
 }
