@@ -20,7 +20,8 @@ function execSimulation() {
 
   let pendingInvocations = [];
   let warmContainers = INITIAL_WARM_CONTAINERS;
-  let usableConcurrency = Math.min(BURST_CONCURRENCY_QUOTA, MAX_CONCURRENCY_LIMIT);
+  let usableConcurrency = Math.max(
+    Math.min(BURST_CONCURRENCY_QUOTA, MAX_CONCURRENCY_LIMIT), INITIAL_WARM_CONTAINERS);
   let burstConcurrencyQuotaBreached = false;
 
   let seriesTimeSec = [0];
@@ -110,13 +111,13 @@ function execSimulation() {
         invocationsStarted++;
         concurrency++;
 
-        if (concurrency == BURST_CONCURRENCY_QUOTA)
+        if (concurrency == Math.max(BURST_CONCURRENCY_QUOTA, INITIAL_WARM_CONTAINERS))
           burstConcurrencyQuotaBreached = true;
       }
       maxConcurrency = Math.max(maxConcurrency, concurrency);
     }
     warmStarts = invocationsStarted - coldStarts;
-
+    
     seriesTimeSec.push(sec + 1);
     seriesInvocationsRequested.push(invocationsAttempted);
     seriesInvocationsStarted.push(invocationsStarted);
