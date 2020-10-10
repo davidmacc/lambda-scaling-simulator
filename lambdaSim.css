@@ -33,8 +33,7 @@ body {
     font-weight: 700;
 }
 
-.params input,
-.params select {
+.params input, .params select {
     margin-top: 3px;
     font-size: 1.0em;
     padding: 4px 7px;
@@ -45,7 +44,7 @@ body {
 .summary {
     font-size: 0.9em;
     border-spacing: 0px;
-    padding-bottom: 20px;
+    padding-bottom: 30px;
 }
 
 .summary td {
@@ -55,13 +54,15 @@ body {
 
 .summary tr td:nth-child(2) {
     text-align: right;
+    padding-left: 20px;
 }
 
 .summary tr td:nth-child(3) {
     padding-left: 10px;
 }
 
-h3 {
+h2 {
+    font-size: 1.2em;
     font-weight: 500;
     color: rgb(215, 107, 0);
 }
@@ -80,8 +81,7 @@ h3 {
 }
 
 #notes {
-    font-size:0.8em; 
+    font-size: 0.8em;
     padding-bottom: 0px;
     line-height: 20px;
-    font-style: italic;
 }

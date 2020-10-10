@@ -16,7 +16,6 @@ function execSimulation() {
   const SIM_DURATION_SEC = getInt("SIM_DURATION_SEC");
   const BURST_CONCURRENCY_QUOTA = getSelectValInt("AWS_REGION");
   const POST_BURST_CONCURRENCY_SCALE_PER_MIN = 500;
-  const RPS_LIMIT = 10 * MAX_CONCURRENCY_LIMIT;
 
   let pendingInvocations = [];
   let warmContainers = INITIAL_WARM_CONTAINERS;
@@ -88,7 +87,7 @@ function execSimulation() {
         invocationsAttempted++;
         concurrency = pendingInvocations.length;
 
-        if (concurrency == Math.floor(usableConcurrency) || invocationsAttempted >= RPS_LIMIT) {
+        if (concurrency == Math.floor(usableConcurrency)) {
           throttles++;
           continue;
         }
@@ -147,18 +146,18 @@ function execSimulation() {
   const AVG_DURATION = (((SUM_COLD_STARTS * COLD_START_DURATION_MS) +
     (SUM_WARM_STARTS * WARM_START_DURATION_MS)) / SUM_INVOCATIONS_STARTED).toFixed(0);
 
-  setHtml("summarySimDuration", SIM_DURATION_SEC + " sec");
-  setHtml("summaryInvocationsRequested", SUM_INVOCATIONS_REQUESTED);
-  setHtml("summaryInvocationsStarted", SUM_INVOCATIONS_STARTED);
+  setHtml("summarySimDuration", numWithCommas(SIM_DURATION_SEC) + " sec");
+  setHtml("summaryInvocationsRequested", numWithCommas(SUM_INVOCATIONS_REQUESTED));
+  setHtml("summaryInvocationsStarted", numWithCommas(SUM_INVOCATIONS_STARTED));
   setHtml("summaryInvocationsStartedPct", "(" + PCT_INVOCATIONS_STARTED + "%)");
-  setHtml("summaryInvocationsStartedCold", SUM_COLD_STARTS);
+  setHtml("summaryInvocationsStartedCold", numWithCommas(SUM_COLD_STARTS));
   setHtml("summaryInvocationsStartedColdPct", "(" + PCT_COLD_STARTS + "%)");
-  setHtml("summaryInvocationsStartedWarm", SUM_WARM_STARTS);
+  setHtml("summaryInvocationsStartedWarm", numWithCommas(SUM_WARM_STARTS));
   setHtml("summaryInvocationsStartedWarmPct", "(" + PCT_WARM_STARTS + "%)");
-  setHtml("summaryInvocationsThrottled", SUM_THROTTLES);
+  setHtml("summaryInvocationsThrottled", numWithCommas(SUM_THROTTLES));
   setHtml("summaryInvocationsThrottledPct", "(" + PCT_THROTTLES + "%)");
   setHtml("summaryConcurrencyMax", MAX_CONCURRENCY);
-  setHtml("summaryAvgDuration", AVG_DURATION);
+  setHtml("summaryAvgDuration", AVG_DURATION + " ms");
 
   // Render chart 
 
@@ -313,6 +312,10 @@ function getInt(elementId) {
 
 function getSelectValInt(elementId) {
   return parseInt(document.getElementById(elementId).options[document.getElementById(elementId).selectedIndex].value);
+}
+
+function numWithCommas(num) {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 runLambdaSim();
