@@ -1,42 +1,43 @@
-let lambdaChart;
+let chart;
+const chartSeriesToggles = [0, 1, 1, 1, 1, 0, 0, 1, 1, 1];
 
 function runLambdaSim() {
-  setHtml("status", "Executing...");
+  setHtml('status', 'Executing...');
   setTimeout(execSimulation, 0);
 }
 
 function execSimulation() {
-  const START = new Date();
-  const TARGET_RPS = getInt("TARGET_RPS");
-  const RAMPUP_PERIOD_SEC = getInt("RAMPUP_PERIOD_SEC");
-  const COLD_START_DURATION_MS = getInt("COLD_START_DURATION_MS");
-  const WARM_START_DURATION_MS = getInt("WARM_START_DURATION_MS");
-  const MAX_CONCURRENCY_LIMIT = getInt("CONCURRENCY_LIMIT");
-  const INITIAL_WARM_CONTAINERS = getInt("INITIAL_WARM_CONTAINERS");
-  const SIM_DURATION_SEC = getInt("SIM_DURATION_SEC");
-  const BURST_CONCURRENCY_QUOTA = getSelectValInt("AWS_REGION");
+  const startTime = new Date();
+  const targetRPS = getInt('targetRPS');
+  const rampupPeriodSec = getInt('rampupPeriodSec');
+  const coldStartDurationMs = getInt('coldStartDurationMs');
+  const warmStartDurationMs = getInt('warmStartDurationMs');
+  const maxConcurrencyLimit = getInt('concurrencyLimit');
+  const initialWarmContainers = getInt('initialWarmContainers');
+  const simDurationSec = getInt('simDurationSec');
+  const burstConcurrencyQuota = getSelectValInt('awsRegion');
   const POST_BURST_CONCURRENCY_SCALE_PER_MIN = 500;
 
-  let pendingInvocations = [];
-  let warmContainers = INITIAL_WARM_CONTAINERS;
+  const pendingInvocations = [];
+  let warmContainers = initialWarmContainers;
   let usableConcurrency = Math.max(
-    Math.min(BURST_CONCURRENCY_QUOTA, MAX_CONCURRENCY_LIMIT), INITIAL_WARM_CONTAINERS);
+    Math.min(burstConcurrencyQuota, maxConcurrencyLimit), initialWarmContainers);
   let burstConcurrencyQuotaBreached = false;
-
-  let seriesTimeSec = [0];
-  let seriesInvocationsRequested = [0];
-  let seriesInvocationsStarted = [0];
-  let seriesInvocationsCompleted = [0];
-  let seriesMaxConcurrency = [0];
-  let seriesUsableConcurrency = [usableConcurrency];
-  let seriesConcurrencyLimit = [MAX_CONCURRENCY_LIMIT];
-  let seriesColdStarts = [0];
-  let seriesWarmStarts = [0];
-  let seriesThrottles = [0];
-  let seriesWarmContainers = [warmContainers];
+  
+  const seriesTimeSec = [0];
+  const seriesInvocationsRequested = [0];
+  const seriesInvocationsStarted = [0];
+  const seriesInvocationsCompleted = [0];
+  const seriesMaxConcurrency = [0];
+  const seriesUsableConcurrency = [usableConcurrency];
+  const seriesConcurrencyLimit = [maxConcurrencyLimit];
+  const seriesColdStarts = [0];
+  const seriesWarmStarts = [0];
+  const seriesThrottles = [0];
+  const seriesWarmContainers = [warmContainers];
 
   // {Loop: Seconds}
-  for (sec = 0; sec < SIM_DURATION_SEC; sec++) {
+  for (sec = 0; sec < simDurationSec; sec++) {
 
     let invocationsAttempted = 0;
     let invocationsStarted = 0;
@@ -48,9 +49,9 @@ function execSimulation() {
     let lastInvokeTimeMs = 0;
 
     // Calculate requests to invoke in current second, and interval (ms)
-    const TARGET_REQUESTS = sec < RAMPUP_PERIOD_SEC ?
-      (TARGET_RPS / RAMPUP_PERIOD_SEC) * (sec + 1) : TARGET_RPS;
-    const REQUEST_INTERVAL_MS = (1 / TARGET_REQUESTS) * 1000;
+    const targetRequests = sec < rampupPeriodSec ?
+      (targetRPS / rampupPeriodSec) * (sec + 1) : targetRPS;
+    const requestIntervalMs = (1 / targetRequests) * 1000;
 
     // {Loop: Milliseconds}
     for (ms = 0; ms < 1000; ms++) {
@@ -66,21 +67,21 @@ function execSimulation() {
       // Determine how many invocations we should execute for this millisecond
       let numToInvoke = 0;
       if (invocationsAttempted == 0) {
-        numToInvoke = Math.max(1, Math.floor(1 / REQUEST_INTERVAL_MS));
+        numToInvoke = Math.max(1, Math.floor(1 / requestIntervalMs));
       }
       else {
         let timeSinceLastInvokeMs = ms - lastInvokeTimeMs;
-        if (timeSinceLastInvokeMs >= REQUEST_INTERVAL_MS) {
-          numToInvoke = Math.floor(timeSinceLastInvokeMs / REQUEST_INTERVAL_MS);
+        if (timeSinceLastInvokeMs >= requestIntervalMs) {
+          numToInvoke = Math.floor(timeSinceLastInvokeMs / requestIntervalMs);
           // Bump up invocations by 1 if short (due to rounding)
-          if (ms == 999 && invocationsStarted + numToInvoke < TARGET_REQUESTS) numToInvoke++;
-          lastInvokeTimeMs += REQUEST_INTERVAL_MS * numToInvoke;
+          if (ms == 999 && invocationsStarted + numToInvoke < targetRequests) numToInvoke++;
+          lastInvokeTimeMs += requestIntervalMs * numToInvoke;
         }
       }
 
       if (burstConcurrencyQuotaBreached)
         usableConcurrency = Math.min(usableConcurrency +
-          (POST_BURST_CONCURRENCY_SCALE_PER_MIN / (60 * 1000)), MAX_CONCURRENCY_LIMIT);
+          (POST_BURST_CONCURRENCY_SCALE_PER_MIN / (60 * 1000)), maxConcurrencyLimit);
 
       // 'Execute' invocations
       for (n = 1; n <= numToInvoke; n++) {
@@ -92,10 +93,9 @@ function execSimulation() {
           continue;
         }
 
-        const IS_COLD_START = !(concurrency < warmContainers);
-        endTimeMs = currentTimeMs +
-          (IS_COLD_START ? COLD_START_DURATION_MS : WARM_START_DURATION_MS);
-        if (IS_COLD_START) {
+        const isColdStart = !(concurrency < warmContainers);
+        endTimeMs = currentTimeMs + (isColdStart ? coldStartDurationMs : warmStartDurationMs);
+        if (isColdStart) {
           coldStarts++;
           warmContainers++;
         }
@@ -110,13 +110,13 @@ function execSimulation() {
         invocationsStarted++;
         concurrency++;
 
-        if (concurrency == Math.max(BURST_CONCURRENCY_QUOTA, INITIAL_WARM_CONTAINERS))
+        if (concurrency == Math.max(burstConcurrencyQuota, initialWarmContainers))
           burstConcurrencyQuotaBreached = true;
       }
       maxConcurrency = Math.max(maxConcurrency, concurrency);
     }
     warmStarts = invocationsStarted - coldStarts;
-    
+
     seriesTimeSec.push(sec + 1);
     seriesInvocationsRequested.push(invocationsAttempted);
     seriesInvocationsStarted.push(invocationsStarted);
@@ -127,114 +127,125 @@ function execSimulation() {
     seriesUsableConcurrency.push(Math.floor(usableConcurrency));
     seriesThrottles.push(throttles);
     seriesWarmContainers.push(warmContainers);
-    seriesConcurrencyLimit.push(MAX_CONCURRENCY_LIMIT);
+    seriesConcurrencyLimit.push(maxConcurrencyLimit);
   }
 
   // Calc summary data
 
-  const SUM_INVOCATIONS_REQUESTED = sumArray(seriesInvocationsRequested);
-  const SUM_INVOCATIONS_STARTED = sumArray(seriesInvocationsStarted);
-  const PCT_INVOCATIONS_STARTED = (100 * SUM_INVOCATIONS_STARTED / SUM_INVOCATIONS_REQUESTED).toFixed(2);
-  const SUM_COLD_STARTS = sumArray(seriesColdStarts);
-  const SUM_WARM_STARTS = sumArray(seriesWarmStarts);
-  const PCT_COLD_STARTS = (100 * SUM_COLD_STARTS / SUM_INVOCATIONS_STARTED).toFixed(2);
-  const PCT_WARM_STARTS = (100 * SUM_WARM_STARTS / SUM_INVOCATIONS_STARTED).toFixed(2);
-  const SUM_THROTTLES = sumArray(seriesThrottles);
-  const PCT_THROTTLES = (SUM_THROTTLES == 0 ?
-    0 : (100 * SUM_THROTTLES / SUM_INVOCATIONS_REQUESTED)).toFixed(2);
-  const MAX_CONCURRENCY = maxArray(seriesMaxConcurrency);
-  const AVG_DURATION = (((SUM_COLD_STARTS * COLD_START_DURATION_MS) +
-    (SUM_WARM_STARTS * WARM_START_DURATION_MS)) / SUM_INVOCATIONS_STARTED).toFixed(0);
+  const sumInvocationsRequested = sumArray(seriesInvocationsRequested);
+  const sumInvocationsStarted = sumArray(seriesInvocationsStarted);
+  const pctInvocationsStarted = (100 * sumInvocationsStarted / sumInvocationsRequested).toFixed(2);
+  const sumColdStarts = sumArray(seriesColdStarts);
+  const sumWarmStarts = sumArray(seriesWarmStarts);
+  const pctColdStarts = (100 * sumColdStarts / sumInvocationsStarted).toFixed(2);
+  const pctWarmStarts = (100 * sumWarmStarts / sumInvocationsStarted).toFixed(2);
+  const sumThrottles = sumArray(seriesThrottles);
+  const pctThrottles = (sumThrottles == 0 ?
+    0 : (100 * sumThrottles / sumInvocationsRequested)).toFixed(2);
+  const maxConcurrency = maxArray(seriesMaxConcurrency);
+  const avgDuration = (((sumColdStarts * coldStartDurationMs) +
+    (sumWarmStarts * warmStartDurationMs)) / sumInvocationsStarted).toFixed(0);
 
-  setHtml("summarySimDuration", numWithCommas(SIM_DURATION_SEC) + " sec");
-  setHtml("summaryInvocationsRequested", numWithCommas(SUM_INVOCATIONS_REQUESTED));
-  setHtml("summaryInvocationsStarted", numWithCommas(SUM_INVOCATIONS_STARTED));
-  setHtml("summaryInvocationsStartedPct", "(" + PCT_INVOCATIONS_STARTED + "%)");
-  setHtml("summaryInvocationsStartedCold", numWithCommas(SUM_COLD_STARTS));
-  setHtml("summaryInvocationsStartedColdPct", "(" + PCT_COLD_STARTS + "%)");
-  setHtml("summaryInvocationsStartedWarm", numWithCommas(SUM_WARM_STARTS));
-  setHtml("summaryInvocationsStartedWarmPct", "(" + PCT_WARM_STARTS + "%)");
-  setHtml("summaryInvocationsThrottled", numWithCommas(SUM_THROTTLES));
-  setHtml("summaryInvocationsThrottledPct", "(" + PCT_THROTTLES + "%)");
-  setHtml("summaryConcurrencyMax", MAX_CONCURRENCY);
-  setHtml("summaryAvgDuration", AVG_DURATION + " ms");
+  setHtml('summarySimDuration', numWithCommas(simDurationSec) + ' sec');
+  setHtml('summaryInvocationsRequested', numWithCommas(sumInvocationsRequested));
+  setHtml('summaryInvocationsStarted', numWithCommas(sumInvocationsStarted));
+  setHtml('summaryInvocationsStartedPct', `(${pctInvocationsStarted}%)`);
+  setHtml('summaryInvocationsStartedCold', numWithCommas(sumColdStarts));
+  setHtml('summaryInvocationsStartedColdPct', `(${pctColdStarts}%)`);
+  setHtml('summaryInvocationsStartedWarm', numWithCommas(sumWarmStarts));
+  setHtml('summaryInvocationsStartedWarmPct', `(${pctWarmStarts}%)`);
+  setHtml('summaryInvocationsThrottled', numWithCommas(sumThrottles));
+  setHtml('summaryInvocationsThrottledPct', `(${pctThrottles}%)`);
+  setHtml('summaryConcurrencyMax', maxConcurrency);
+  setHtml('summaryAvgDuration', avgDuration + ' ms');
 
   // Render chart 
 
-  let chartData = {
+  if (chart) {
+    chartSeriesToggles.forEach((elem, i, arr) => arr[i] = chart.isDatasetVisible(i));
+  }
+
+  const chartData = {
     labels: seriesTimeSec,
     datasets: [
       {
         label: 'Invocations Requested',
         data: seriesInvocationsRequested,
-        borderColor: "#8a765f",
+        borderColor: '#8a765f',
         fill: false,
-        hidden: true
+        hidden: !chartSeriesToggles[0]
       },
       {
         label: 'Invocations Started',
         data: seriesInvocationsStarted,
-        borderColor: "#3e95cd",
-        fill: false
+        borderColor: '#3e95cd',
+        fill: false,
+        hidden: !chartSeriesToggles[1]
       },
       {
         label: 'Invocations Started (Cold)',
         data: seriesColdStarts,
-        borderColor: "#3e8e72",
-        fill: false
+        borderColor: '#3e8e72',
+        fill: false,
+        hidden: !chartSeriesToggles[2]
       },
       {
         label: 'Invocations Started (Warm)',
         data: seriesWarmStarts,
-        borderColor: "#6cbc1f",
-        fill: false
+        borderColor: '#6cbc1f',
+        fill: false,
+        hidden: !chartSeriesToggles[3]
       },
       {
         label: 'Invocations Completed',
         data: seriesInvocationsCompleted,
-        borderColor: "#8e5ea2",
-        fill: false
+        borderColor: '#8e5ea2',
+        fill: false,
+        hidden: !chartSeriesToggles[4]
       },
       {
         label: 'Concurrency Limit',
         data: seriesConcurrencyLimit,
-        borderColor: "#a8c3cf",
+        borderColor: '#a8c3cf',
         fill: false,
-        hidden: true
+        hidden: !chartSeriesToggles[5]
       },
       {
         label: 'Addressable Concurrency (Burst)',
         data: seriesUsableConcurrency,
-        borderColor: "#cdd188",
+        borderColor: '#cdd188',
         fill: false,
-        hidden: true
+        hidden: !chartSeriesToggles[6]
       },
       {
         label: 'Concurrency',
         data: seriesMaxConcurrency,
-        borderColor: "#e8c3b9",
-        fill: false
+        borderColor: '#e8c3b9',
+        fill: false,
+        hidden: !chartSeriesToggles[7]
       },
       {
         label: 'Provisioned/Warmed Instances',
         data: seriesWarmContainers,
-        borderColor: "#c8a3c9",
-        fill: false
+        borderColor: '#c8a3c9',
+        fill: false,
+        hidden: !chartSeriesToggles[8]
       },
       {
         label: 'Throttles',
         data: seriesThrottles,
-        borderColor: "#ff23b1",
-        fill: false
+        borderColor: '#ff23b1',
+        fill: false,
+        hidden: !chartSeriesToggles[9]
       }
     ]
   };
 
   renderChart(chartData);
 
-  const END = new Date();
-  const SIM_TIME = END - START;
-  setHtml("status", "[Completed in " + SIM_TIME / 1000 + " sec]");
+  const endTime = new Date();
+  const duration = endTime - startTime;
+  setHtml('status', `[Completed in ${duration / 1000} sec]`);
 }
 
 function renderChart(chartData) {
@@ -247,8 +258,8 @@ function renderChart(chartData) {
       duration: 0,
     },
     legend: {
-      position: "right",
-      align: "left"
+      position: 'right',
+      align: 'left'
     },
     scales: {
       yAxes: [{
@@ -265,33 +276,33 @@ function renderChart(chartData) {
     },
     elements: {
       line: {
-        // tension: 0.2
+        //tension: 0.3
       }
     }
   };
 
-  if (lambdaChart == null) {
-    let ctx = document.getElementById("lambdaChart").getContext('2d');
-    lambdaChart = new Chart(ctx, {
+  if (chart == null) {
+    let ctx = document.getElementById('lambdaChart').getContext('2d');
+    chart = new Chart(ctx, {
       type: 'line',
       options: chartOptions,
       data: chartData
     });
   }
   else {
-    lambdaChart.data = chartData;
-    lambdaChart.update();
+    chart.data = chartData;
+    chart.update();
   }
 }
 
 function rampUpPeriodUpdated(obj) {
   let rampUpPeriod = parseInt(obj.value);
-  document.getElementById("SIM_DURATION_SEC").value = Math.max(rampUpPeriod * 2, 10);
+  document.getElementById('simDurationSec').value = Math.max(rampUpPeriod * 2, 10);
 }
 
 function awsRegionUpdated(obj) {
   var value = obj.value;
-  document.getElementById("BURST_CONCURRENCY_QUOTA").value = value;
+  document.getElementById('burstConcurrencyQuota').value = value;
 }
 
 function sumArray(arr) {

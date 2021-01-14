@@ -3,6 +3,8 @@ body {
     font-size: 1.0em;
     padding: 0px 20px;
     color: #444;
+    max-height: 100vh;
+    max-width: 100vh;
 }
 
 .container {
