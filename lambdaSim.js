@@ -16,7 +16,7 @@ function execSimulation() {
   const initialWarmContainers = getInt('initialWarmContainers');
   const simDurationSec = getInt('simDurationSec');
   const INITIAL_BURST_QUOTA = 1000;
-  const CONCURRENCY_SCALING_RATE_PER_MIN = 60000;
+  const CONCURRENCY_SCALING_RATE_PER_MIN = 6000;
 
   const pendingInvocations = [];
   let warmContainers = initialWarmContainers;
