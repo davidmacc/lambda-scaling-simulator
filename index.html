@@ -67,29 +67,6 @@
         </div>
         <div>
             <div>
-                <label for="awsRegion">AWS Region</label>
-                <span id="tooltip-awsRegion" class="info">&#9432;</span>
-            </div>
-            <div><select name="awsRegion" id="awsRegion" onchange="awsRegionUpdated(this); runLambdaSim();">
-                    <option value="3000">US East (N. Virginia)</option>
-                    <option value="3000">US West (Oregon)</option>
-                    <option value="3000">Europe (Ireland)</option>
-                    <option value="1000">US East (Ohio)</option>
-                    <option value="1000">Asia Pacific (Tokyo)</option>
-                    <option value="1000">Europe (Frankfurt)</option>
-                    <option value="500">Other Regions</option>
-                </select>
-            </div>
-        </div>
-        <div>
-            <div>
-                <label for="burstConcurrencyQuota">Burst Concurrency Quota</label>
-                <span id="tooltip-burstConcurrencyQuota" class="info">&#9432;</span>
-            </div>
-            <div><input type="number" id="burstConcurrencyQuota" min="1" max="5000" value="3000" disabled /></div>
-        </div>
-        <div>
-            <div>
                 <label for="simDurationSec">Simulation Period</label>
                 <span id="tooltip-simDurationSec" class="info">&#9432;</span>
             </div>
@@ -135,7 +112,7 @@
             <td id="summaryInvocationsStartedWarmPct"></td>
         </tr>
         <tr>
-            <td>Max Concurrency</td>
+            <td>Peak Concurrency</td>
             <td id="summaryConcurrencyMax"></td>
             <td></td>
         </tr>
@@ -146,6 +123,7 @@
         </tr>
     </table>
     <p id="notes">
+        Last updated: 27-NOV-2023 <br/>
         GitHub: <a
             href="https://github.com/davidmacc/lambda-scaling-simulator">https://github.com/davidmacc/lambda-scaling-simulator</a><br />
         Reference docs: <a href="https://docs.aws.amazon.com/lambda/latest/dg/invocation-scaling.html">AWS Lambda
@@ -164,8 +142,6 @@
     tippy('#tooltip-warmStartDurationMs', { content: 'Function duration for a warm-start invocation (reused function instance) [units: milliseconds].' });
     tippy('#tooltip-concurrencyLimit', { content: 'Maximum concurrency (parallel executions) of the function. Defined using either function-level \'reserved concurrency\' or account-level \'unreserved concurrency\'. Default limit is 1000.' });
     tippy('#tooltip-initialWarmContainers', { content: 'Provisioned Concurrency or number of pre-warmed function instances at start of simulation.' });
-    tippy('#tooltip-awsRegion', { content: 'AWS Region in which function will execute. Determines Burst Concurrency Quota (fixed per region).' });
-    tippy('#tooltip-burstConcurrencyQuota', { content: 'Level of concurrency that can be reached with an initial burst of traffic (fixed per region). After the initial burst, concurrency can scale by an additional 500 instances each minute, until the function concurrency limit is reached.' });
     tippy('#tooltip-simDurationSec', { content: 'Time period to simulate [units: seconds].' });
 </script>
 

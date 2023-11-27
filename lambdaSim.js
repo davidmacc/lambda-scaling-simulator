@@ -15,14 +15,14 @@ function execSimulation() {
   const maxConcurrencyLimit = getInt('concurrencyLimit');
   const initialWarmContainers = getInt('initialWarmContainers');
   const simDurationSec = getInt('simDurationSec');
-  const burstConcurrencyQuota = getSelectValInt('awsRegion');
-  const POST_BURST_CONCURRENCY_SCALE_PER_MIN = 500;
+  const INITIAL_BURST_QUOTA = 1000;
+  const CONCURRENCY_SCALING_RATE_PER_MIN = 60000;
 
   const pendingInvocations = [];
   let warmContainers = initialWarmContainers;
   let usableConcurrency = Math.max(
-    Math.min(burstConcurrencyQuota, maxConcurrencyLimit), initialWarmContainers);
-  let burstConcurrencyQuotaBreached = false;
+    Math.min(INITIAL_BURST_QUOTA, maxConcurrencyLimit), initialWarmContainers);
+  let concurrencyExhausted = false;
   
   const seriesTimeSec = [0];
   const seriesInvocationsRequested = [0];
@@ -79,9 +79,9 @@ function execSimulation() {
         }
       }
 
-      if (burstConcurrencyQuotaBreached)
+      if (concurrencyExhausted)
         usableConcurrency = Math.min(usableConcurrency +
-          (POST_BURST_CONCURRENCY_SCALE_PER_MIN / (60 * 1000)), maxConcurrencyLimit);
+          (CONCURRENCY_SCALING_RATE_PER_MIN / (60 * 1000)), maxConcurrencyLimit);
 
       // 'Execute' invocations
       for (n = 1; n <= numToInvoke; n++) {
@@ -110,8 +110,7 @@ function execSimulation() {
         invocationsStarted++;
         concurrency++;
 
-        if (concurrency == Math.max(burstConcurrencyQuota, initialWarmContainers))
-          burstConcurrencyQuotaBreached = true;
+        concurrencyExhausted = (concurrency == usableConcurrency);
       }
       maxConcurrency = Math.max(maxConcurrency, concurrency);
     }
@@ -211,7 +210,7 @@ function execSimulation() {
         hidden: !chartSeriesToggles[5]
       },
       {
-        label: 'Addressable Concurrency (Burst)',
+        label: 'Usable Concurrency',
         data: seriesUsableConcurrency,
         borderColor: '#cdd188',
         fill: false,
@@ -298,11 +297,6 @@ function renderChart(chartData) {
 function rampUpPeriodUpdated(obj) {
   let rampUpPeriod = parseInt(obj.value);
   document.getElementById('simDurationSec').value = Math.max(rampUpPeriod * 2, 10);
-}
-
-function awsRegionUpdated(obj) {
-  var value = obj.value;
-  document.getElementById('burstConcurrencyQuota').value = value;
 }
 
 function sumArray(arr) {
