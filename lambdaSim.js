@@ -110,7 +110,7 @@ function execSimulation() {
         invocationsStarted++;
         concurrency++;
 
-        concurrencyExhausted = (concurrency == usableConcurrency);
+        concurrencyExhausted = (concurrency == Math.floor(usableConcurrency));
       }
       maxConcurrency = Math.max(maxConcurrency, concurrency);
     }
