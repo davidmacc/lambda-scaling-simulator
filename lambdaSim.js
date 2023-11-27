@@ -15,14 +15,13 @@ function execSimulation() {
   const maxConcurrencyLimit = getInt('concurrencyLimit');
   const initialWarmContainers = getInt('initialWarmContainers');
   const simDurationSec = getInt('simDurationSec');
-  const INITIAL_BURST_QUOTA = 1000;
+  const CONCURRENCY_BURST_BUCKET = 1000;
   const CONCURRENCY_SCALING_RATE_PER_MIN = 6000;
 
   const pendingInvocations = [];
   let warmContainers = initialWarmContainers;
   let usableConcurrency = Math.max(
-    Math.min(INITIAL_BURST_QUOTA, maxConcurrencyLimit), initialWarmContainers);
-  let concurrencyExhausted = false;
+    Math.min(CONCURRENCY_BURST_BUCKET, maxConcurrencyLimit), initialWarmContainers);
   
   const seriesTimeSec = [0];
   const seriesInvocationsRequested = [0];
@@ -79,10 +78,6 @@ function execSimulation() {
         }
       }
 
-      if (concurrencyExhausted)
-        usableConcurrency = Math.min(usableConcurrency +
-          (CONCURRENCY_SCALING_RATE_PER_MIN / (60 * 1000)), maxConcurrencyLimit);
-
       // 'Execute' invocations
       for (n = 1; n <= numToInvoke; n++) {
         invocationsAttempted++;
@@ -109,9 +104,14 @@ function execSimulation() {
         pendingInvocations.splice(pos, 0, { 'endTimeMs': endTimeMs });
         invocationsStarted++;
         concurrency++;
-
-        concurrencyExhausted = (concurrency == Math.floor(usableConcurrency));
       }
+
+      // Scale concurrency based on current use
+      concurrency = pendingInvocations.length;
+      if (concurrency + CONCURRENCY_BURST_BUCKET > usableConcurrency)
+        usableConcurrency = Math.min(usableConcurrency +
+          (CONCURRENCY_SCALING_RATE_PER_MIN / (60 * 1000)), maxConcurrencyLimit);
+
       maxConcurrency = Math.max(maxConcurrency, concurrency);
     }
     warmStarts = invocationsStarted - coldStarts;
