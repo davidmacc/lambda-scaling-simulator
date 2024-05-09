@@ -17,8 +17,10 @@ function execSimulation() {
   const simDurationSec = getInt('simDurationSec');
   const CONCURRENCY_BURST_BUCKET = 1000;
   const CONCURRENCY_SCALING_RATE_PER_MIN = 6000;
+  const ENVIRONMENT_RPS_LIMIT = 10;
 
   const pendingInvocations = [];
+  let concurrency = 0;
   let warmContainers = initialWarmContainers;
   let usableConcurrency = Math.max(
     Math.min(CONCURRENCY_BURST_BUCKET, maxConcurrencyLimit), initialWarmContainers);
@@ -55,11 +57,13 @@ function execSimulation() {
     // {Loop: Milliseconds}
     for (ms = 0; ms < 1000; ms++) {
 
-      currentTimeMs = (sec * 1000) + ms;
-
+      let currentTimeMs = (sec * 1000) + ms;
+      let rpsLimit = ENVIRONMENT_RPS_LIMIT * warmContainers; 
+      
       // 'Complete' pending invocations
       while (pendingInvocations.length > 0 && pendingInvocations[0].endTimeMs == currentTimeMs) {
         pendingInvocations.shift();
+        concurrency--;
         invocationsCompleted++;
       }
 
@@ -81,14 +85,13 @@ function execSimulation() {
       // 'Execute' invocations
       for (n = 1; n <= numToInvoke; n++) {
         invocationsAttempted++;
-        concurrency = pendingInvocations.length;
 
-        if (concurrency == Math.floor(usableConcurrency)) {
+        if (concurrency >= Math.floor(usableConcurrency)) {
           throttles++;
           continue;
         }
 
-        const isColdStart = !(concurrency < warmContainers);
+        const isColdStart = (concurrency == warmContainers) || (invocationsStarted > rpsLimit);
         endTimeMs = currentTimeMs + (isColdStart ? coldStartDurationMs : warmStartDurationMs);
         if (isColdStart) {
           coldStarts++;
@@ -102,13 +105,12 @@ function execSimulation() {
             break;
 
         pendingInvocations.splice(pos, 0, { 'endTimeMs': endTimeMs });
-        invocationsStarted++;
         concurrency++;
+        invocationsStarted++;
       }
 
-      // Scale concurrency based on current use
-      concurrency = pendingInvocations.length;
-      if (concurrency + CONCURRENCY_BURST_BUCKET > usableConcurrency)
+      // Scale burst concurrency based on current use
+      if (warmContainers + CONCURRENCY_BURST_BUCKET > usableConcurrency)
         usableConcurrency = Math.min(usableConcurrency +
           (CONCURRENCY_SCALING_RATE_PER_MIN / (60 * 1000)), maxConcurrencyLimit);
 
@@ -141,7 +143,7 @@ function execSimulation() {
   const sumThrottles = sumArray(seriesThrottles);
   const pctThrottles = (sumThrottles == 0 ?
     0 : (100 * sumThrottles / sumInvocationsRequested)).toFixed(2);
-  const maxConcurrency = maxArray(seriesMaxConcurrency);
+  const maxConcurrency = maxArray(seriesWarmContainers);
   const avgDuration = (((sumColdStarts * coldStartDurationMs) +
     (sumWarmStarts * warmStartDurationMs)) / sumInvocationsStarted).toFixed(0);
 
@@ -217,7 +219,7 @@ function execSimulation() {
         hidden: !chartSeriesToggles[6]
       },
       {
-        label: 'Concurrency',
+        label: 'Concurrent Invocations',
         data: seriesMaxConcurrency,
         borderColor: '#e8c3b9',
         fill: false,
